@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import './map-container.scss';
 import { GoogleMap, LoadScript, Marker, InfoWindow, StandaloneSearchBox } from '@react-google-maps/api';
+import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
+import { FormControl, InputLabel, Select, MenuItem } from '@material-ui/core';
 
 
 interface ICoordinate {
@@ -34,12 +36,27 @@ const options = {
 const apiKey = process.env.REACT_APP_GOOGLE_API_KEY;
 
 
+const useStyles = makeStyles((theme: Theme) =>
+  createStyles({
+    formControl: {
+      margin: theme.spacing(1),
+      minWidth: 220,
+      
+    },
+    selectEmpty: {
+      marginTop: theme.spacing(2),
+    },
+  }),
+);
+
+
 const MapContainer = () => {
+  const classes = useStyles();
+
   const [markers, setMarkers] = useState([]) as any;
-  const [radius, setRadius] = useState([]) as any;
-  const [userLocation, setUserLocation] = useState(null) as any;
+  const [radius, setRadius] = useState(1000) as any;
   const [selectedMarker, setSelectedMarker] = useState(null) as any;
-  const [autocomplete, setAutocomplete] = useState(null) as any;
+  const [searchValue, setSearchValue] = useState(null) as any;
   const [searchedLocation, setSearchedLocation] = useState({
     lat: 42.3600825, lng: -71.0588801,
     id: '3'
@@ -59,21 +76,13 @@ const MapContainer = () => {
     placesRef.current = new google.maps.places.PlacesService(map);
   }, []);
 
-   
-
-  // const onUnmount = React.useCallback(function callback(map) {
-  //   setMap(null);
-  // }, []);
-
   useEffect(() => {
-    // console.log(process.env.REACT_APP_GOOGLE_API_KEY);
     const request = {
       location: searchedLocation,
-      radius: 1000,
+      radius,
       types: ['hospital']
     };
 
-    console.log(request)
     if (placesRef.current) {
       placesRef.current.nearbySearch(request, (result: any, status: any) => {
         console.log(status)
@@ -91,18 +100,7 @@ const MapContainer = () => {
          }
        });
     }
-  }, [searchedLocation])
-  const handleMapClick = React.useCallback((e: any) => {
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
-    setMarkers((currentMarkers: ICoordinate[]) => [
-      ...currentMarkers,
-      {
-        lat,
-        lng
-      }
-    ])
-  }, []);
+  }, [searchedLocation, radius])
   
   const handleMarkerClick = (marker: any) => {
     setSelectedMarker(marker)
@@ -114,17 +112,13 @@ const MapContainer = () => {
 
 
   
-  const onLoadAutocomplete = (autocomplete: any) => {
-    console.log('autocomplete: ', autocomplete)
-
-    setAutocomplete(autocomplete);
+  const onSearchBoxLoad = (value: any) => {
+    setSearchValue(value);
   }
 
   const onPlaceChanged = () => {
-    if (autocomplete !== null) {
-      console.log(autocomplete.getPlaces())
-      const location = autocomplete.getPlaces();
-      console.log(location[0].geometry.location.lat())
+    if (searchValue !== null) {
+      const location = searchValue.getPlaces();
       setSearchedLocation({
         lat: location[0].geometry.location.lat(),
         lng: location[0].geometry.location.lng(),
@@ -136,15 +130,16 @@ const MapContainer = () => {
     }
   }
 
+  const handleSelectionChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+    setRadius(event.target.value as string);
+  };
+
+
 
 
   return (
     <div className="mapContainer">
       <h1>Hospital Finder</h1>
-      {/* 
-      <div className="search">
-        <MapSearcher />
-      </div> */}
 
       <LoadScript
         googleMapsApiKey={apiKey}
@@ -158,10 +153,9 @@ const MapContainer = () => {
           onLoad={onLoad}
           // onUnmount={onUnmount}
           options={options}
-          // onClick={handleMapClick}
         >
           <StandaloneSearchBox
-            onLoad={onLoadAutocomplete}
+            onLoad={onSearchBoxLoad}
             onPlacesChanged={onPlaceChanged}
           >
             <input
@@ -184,13 +178,34 @@ const MapContainer = () => {
               }}
             />
           </StandaloneSearchBox>
-          {/* Child components, such as markers, info windows, etc. */}
-          <></>
+          <div className='selector'>
+            <FormControl variant="filled" className={classes.formControl}>
+              <InputLabel id="radius-label">Radius</InputLabel>
+              <Select
+                labelId="radius-label"
+                id="select-outlined"
+                value={radius}
+                onChange={handleSelectionChange}
+                label="Radius"
+                placeholder='Select Radius'
+              >
+                <MenuItem value={500}>Lessthan 1Km</MenuItem>
+                <MenuItem value={1000}>1Km</MenuItem>
+                <MenuItem value={2000}>2Km</MenuItem>
+                <MenuItem value={5000}>5Km</MenuItem>
+                <MenuItem value={10000}>10Km</MenuItem>
+                <MenuItem value={15000}>15Km</MenuItem>
+                <MenuItem value={20000}>20Km</MenuItem>
+              </Select>
+            </FormControl>
+          </div>
+
           {markers.map((marker: ICoordinate) => (
             <Marker
               key={marker.id}
               position={{lat: marker.lat, lng: marker.lng}}
               onClick={() => handleMarkerClick(marker)}
+              title='Click to view details'
             />
           ))}
 
@@ -202,7 +217,7 @@ const MapContainer = () => {
               <div>
                 <img src={selectedMarker.icon} alt='marker icon' width='20' height='20' />
                 <h3>{selectedMarker.name}</h3>
-                <p>Hospital address goes here</p>
+                {/* <p>Hospital address goes here</p> */}
               </div>
             </InfoWindow>
           ) : null}
