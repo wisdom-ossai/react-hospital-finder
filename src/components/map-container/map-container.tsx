@@ -88,7 +88,6 @@ const MapContainer = () => {
     if (placesRef.current) {
       placesRef.current.nearbySearch(request, (result: google.maps.places.PlaceResult[], status: string) => {
          if (status === 'OK') {
-           console.log(result);
            const places = result.map((place: any) => (
              {
                lat: place.geometry.location.lat(),
