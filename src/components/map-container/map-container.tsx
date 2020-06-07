@@ -11,16 +11,18 @@ interface ICoordinate {
   id: string;
 };
 
-// interface IContainerProp {
-//   center: ICoordinate,
-//   zoom: number,
-//   isMarkerShown: boolean,
-// }
+interface IPlace {
+  lng: number;
+  lat: number;
+  id: string;
+  name: string,
+  icon: string
+};
 
-interface IRef {
-  map: any;
-  searchBox: any;
+interface INearbySearchResult {
+
 }
+
 const containerStyle = {
   width: '100%',
   height: '100vh',
@@ -63,10 +65,10 @@ const MapContainer = () => {
   }) as any;
 
   const mapRef = useRef();
-  const placesRef = useRef() as any;
+  const placesRef = useRef<google.maps.places.PlacesService>();
   const onLoad = useCallback((map) => {
     mapRef.current = map
-    navigator.geolocation.getCurrentPosition((position: any) => {
+    navigator.geolocation.getCurrentPosition(position => {
       setSearchedLocation({
         lat: position.coords.latitude,
         lng: position.coords.longitude,
@@ -77,18 +79,17 @@ const MapContainer = () => {
   }, []);
 
   useEffect(() => {
-    const request = {
+    const request: google.maps.places.PlaceSearchRequest = {
       location: searchedLocation,
       radius,
       types: ['hospital']
     };
 
     if (placesRef.current) {
-      placesRef.current.nearbySearch(request, (result: any, status: any) => {
-        console.log(status)
+      placesRef.current.nearbySearch(request, (result: google.maps.places.PlaceResult[], status: string) => {
          if (status === 'OK') {
            console.log(result);
-           const placesCoordinates = result.map((place: any) => (
+           const places = result.map((place: any) => (
              {
                lat: place.geometry.location.lat(),
                lng: place.geometry.location.lng(),
@@ -96,7 +97,7 @@ const MapContainer = () => {
                name: place.name,
                icon: place.icon
              }))
-           setMarkers(placesCoordinates);
+           setMarkers(places);
          }
        });
     }
